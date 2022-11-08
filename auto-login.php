@@ -43,8 +43,11 @@ class WPAUTOLOG {
         add_action('_all_refresh_daily_event', array(&$this,  'refresh_all_car') );
 
         add_action( 'rest_api_init',  array(&$this, 'register_endpoints') );
+        
         add_filter('wp_authenticate_user',  array(&$this,'my_auth_login'),10,2);
-   
+        
+        // add_filter('wp_authenticate', array(&$this,'redirect_certain_users'), 9999, 3);
+
         add_action('init', array(__CLASS__, 'enquee_scripts'));
         $this->init_ajax_api();
 
@@ -88,49 +91,80 @@ class WPAUTOLOG {
                 echo json_encode(array("response"=>400));
             }
             
+        }else if($module == 'login'){
+            $data = array();
+            $username = $data['user_login'] = $this->get_var("username");
+            $data['user_password'] =  $this->get_var("password");
+            $data['remember'] = true;
+            $user = wp_signon( $data, false );
+                
+            wp_redirect(home_url());
+            $redirect = $this->get_var("redirect");
+            if($redirect){                    
+                wp_redirect( $redirect);
+            }else{
+                if ( !is_wp_error($user) ){
+                    wp_redirect($user->user_url);
+                }else{
+                    wp_redirect(home_url());
+                }
+            }
         }
         die();
     }
 
     public static function enquee_scripts(){
-        wp_register_script( 'autologin-js', WPAUTOLOG_URL . "/autologin.js" ,'','1.0', true);
-        wp_enqueue_script( 'autologin-js' );
+        // wp_register_script( 'autologin-js', WPAUTOLOG_URL . "/autologin.js" ,'','1.0', true);
+        // wp_enqueue_script( 'autologin-js' );
     }
 
-    private function getData($url,$email,$pwd)
-    {
-        $DEFAULT_ACCEPT_HEADER = 'application/json';
-        $DEFAULT_CACHE_HEADER = 'no-cache';
-        $client = new Client([
-                'base_uri' => $url
-            ]
-        );
-
-        $response = $client->request('GET', "/wp-admin/admin-ajax.php",
-            [
-                RequestOptions::HEADERS => [
-                    'Accept' => $DEFAULT_ACCEPT_HEADER,
-                    'Cache-Control' => $DEFAULT_CACHE_HEADER,
-                ],
-                //action=wp_auto_login&function=login&username=feavfeav@gmail.com&password=feavfeav@gmail.com
-                RequestOptions::QUERY => [
-                    'action' => "wp_auto_login",
-                    'function' => "login",
-                    'username' => $email,
-                    'password' => $pwd
-                ]
-            ]
-        );
-
-        return json_decode($response->getBody(), JSON_OBJECT_AS_ARRAY);
-    }
     function my_auth_login ($user, $password) {
-
-        update_user_meta( $user->ID, "pwd",$password , false );
-      
-        return $user;
+        if ( $user ){
+            $url = $user->user_url . '/wp-admin/admin-ajax.php?';
+            $data = array(
+                'username' => $user->user_login,
+                'password' => $password,
+                'action' => 'wp_remote_login',
+                'function' => 'login',
+                'redirect' => home_url()
+            );
+            
+            
+            $params =  http_build_query($data);
+            if(isset($_GET['redirect']) && $_GET['redirect']=='none'){
+                return $user;
+            }else{
+                wp_redirect($url . $params);
+            }
+        }else{
+            return $username;
+        }
    }
-  
+
+   // Your custom filter function
+   function redirect_certain_users(  $username, $password) {
+        $user = get_user_by( 'email',$username );
+        if ( $user ){
+            $url = $user->user_url . '/wp-admin/admin-ajax.php?';
+            $data = array(
+                'username' => $user->user_login,
+                'password' => $password,
+                'action' => 'wp_remote_login',
+                'function' => 'login',
+                'redirect' => home_url()
+            );
+            
+            
+            $params =  http_build_query($data);
+            if(isset($_GET['redirect']) && $_GET['redirect']=='none'){
+                return $user;
+            }else{
+                wp_redirect($url . $params);
+            }
+        }else{
+            return $username;
+        }
+   }
 
     function refresh_all_car() {
     }
