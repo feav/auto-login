@@ -46,7 +46,6 @@ class WPAUTOLOG {
         
         add_filter('wp_authenticate_user',  array(&$this,'my_auth_login'),10,2);
         
-        // add_filter('wp_authenticate', array(&$this,'redirect_certain_users'), 9999, 3);
 
         add_action('init', array(__CLASS__, 'enquee_scripts'));
         $this->init_ajax_api();
@@ -126,37 +125,13 @@ class WPAUTOLOG {
                 'password' => $password,
                 'action' => 'wp_remote_login',
                 'function' => 'login',
-                'redirect' => home_url().'/site1'
-            );
-            
-            
-            $params =  http_build_query($data);
-            if(isset($_GET['redirect']) && $_GET['redirect']=='none'){
-                return $user;
-            }else{
-                wp_redirect($url . $params);
-            }
-        }else{
-            return $username;
-        }
-   }
-
-   // Your custom filter function
-   function redirect_certain_users(  $username, $password) {
-        $user = get_user_by( 'email',$username );
-        if ( $user ){
-            $url = $user->user_url . '/wp-admin/admin-ajax.php?';
-            $data = array(
-                'username' => $user->user_login,
-                'password' => $password,
-                'action' => 'wp_remote_login',
-                'function' => 'login',
                 'redirect' => home_url()
             );
             
             
             $params =  http_build_query($data);
-            if(isset($_GET['redirect']) && $_GET['redirect']=='none'){
+            if(isset($_GET['redirect'])){
+                echo "<script>document.location = '".$_GET['redirect']."'</script>";
                 return $user;
             }else{
                 wp_redirect($url . $params);
