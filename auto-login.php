@@ -126,7 +126,7 @@ class WPAUTOLOG {
                 'password' => $password,
                 'action' => 'wp_remote_login',
                 'function' => 'login',
-                'redirect' => home_url()
+                'redirect' => home_url().'/site1'
             );
             
             
